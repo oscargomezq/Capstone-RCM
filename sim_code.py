@@ -211,14 +211,20 @@ def str2site(strr):
     return [int(x) for x in t]
 
 
-def brute_force_sample (cluster_constraints, uf, config):
+def brute_force_sample (cluster_constraints, cls, uf, config):
     '''Randomly sample a color for each cluster'''
-    for root in cluster_constraints:
-        max_col = cluster_constraints[root]
-        cluster_color = np.random.choice((np.arange(1, max_col+1)))
-        for site_str in uf.component(root):
+    max_col = None
+    for cluster in uf.components():
+        for site_str in cluster:
+            site = str2site(site_str)
+            max_col = cluster_constraints[cls[site[0],site[1]]]
+            cluster_color = np.random.choice((np.arange(1, max_col+1)))
+            break
+        for site_str in cluster:
             site = str2site(site_str)
             config[site[0],site[1]] = cluster_color
+    if prt: print("done sampling cluster colors")
+    
     return config
 
 
@@ -242,7 +248,7 @@ def sample_config(config, eta, N, no_colors, sites, param_name, curr_params, uf=
         eta_sites = eta[2]
         cluster_constraints = {}
         cl_n = 0
-        cls = np.zeros((eta_sites.shape[0],eta_sites.shape[1]), dtype=np.int8)
+        cls = np.zeros((eta_sites.shape[0],eta_sites.shape[1]), dtype=np.uint16) # up to 255x255 box
         for cluster in uf.components():
             cl_n += 1
             min_constraint = no_colors
@@ -254,6 +260,7 @@ def sample_config(config, eta, N, no_colors, sites, param_name, curr_params, uf=
                     cluster_root = site_str
                 cls[site[0],site[1]] = cl_n
             cluster_constraints[cluster_root] = min_constraint
+            cluster_constraints[cl_n] = min_constraint
         if prt: print('clusters formed by bonds (eta_edge):')
         if prt: print(cls)
     
@@ -353,10 +360,9 @@ def sample_config(config, eta, N, no_colors, sites, param_name, curr_params, uf=
     
     # Case with field and gamma > 0 or case with gamma = 0
     else:
-        if prt: print('Case with field and gamma > 0 or case with gamma = 0')
-            
         '''Randomly sample a color for each cluster'''
-        config = brute_force_sample (cluster_constraints, uf, config)
+        if prt: print('Case with field and gamma > 0 or case with gamma = 0')
+        config = brute_force_sample (cluster_constraints, cls, uf, config)
             
     return config, uf, cluster_constraints
 
